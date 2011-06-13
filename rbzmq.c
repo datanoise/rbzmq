@@ -95,7 +95,7 @@ static void context_free (void *ctx)
 {
     if (ctx) {
        int rc = zmq_term (ctx);
-       assert (rc == 0);
+       /* assert (rc == 0); */
     }
 }
 
@@ -132,6 +132,11 @@ static VALUE context_initialize (int argc_, VALUE* argv_, VALUE self_)
     return self_;
 }
 
+static VALUE nonblocking_context_close(void *ctx) {
+  int rc = zmq_term(ctx);
+  return INT2FIX(rc);
+}
+
 /*
  * call-seq:
  *   zmq.close() -> nil
@@ -159,16 +164,17 @@ static VALUE context_initialize (int argc_, VALUE* argv_, VALUE self_)
 static VALUE context_close (VALUE self_)
 {
     void * ctx = NULL;
+    VALUE rc = Qnil;
     Data_Get_Struct (self_, void, ctx);
     
     if (ctx != NULL) {
-        int rc = zmq_term (ctx);
-        assert (rc == 0);
+        rc = rb_thread_blocking_region(nonblocking_context_close, ctx, NULL, NULL);
+        /* assert (rc == 0); */
 
         DATA_PTR (self_) = NULL;
     }
 
-    return Qnil;
+    return rc;
 }
 
 struct poll_state {
